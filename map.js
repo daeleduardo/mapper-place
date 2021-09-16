@@ -25,7 +25,9 @@ class Maps {
             zoom: param.zoom
         });
 
-        map.invalidateSize();
+        setTimeout(() => {
+            map.invalidateSize(); 
+        }, 500);
 
         if (param.tileServer == this.tileServers.MAPBOX) {
             if (param.mapKey === null || (typeof param.mapKey) === 'undefined') {
