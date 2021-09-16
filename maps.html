@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<!--[if lt IE 7]>      <html class="no-js lt-ie9 lt-ie8 lt-ie7"> <![endif]-->
+<!--[if IE 7]>         <html class="no-js lt-ie9 lt-ie8"> <![endif]-->
+<!--[if IE 8]>         <html class="no-js lt-ie9"> <![endif]-->
+<!--[if gt IE 8]>      <html class="no-js"> <!--<![endif]-->
+<html lang="pt-BR">
+
+<head>
+    <meta charset="utf-8">
+    <meta content="IE=edge">
+    <title>Mapper Place</title>
+    <meta name="description" content="Busca por praças, parques e outras atrações">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css"
+        integrity="sha512-xodZBNTC5n17Xt2atTPuE1HxjVMSvLVW9ocqUKLsCC5CXdbqCmblAshOMAS6/keqq/sMZMZ19scR4PsZChSR7A=="
+        crossorigin="" />
+    <!-- UIkit CSS -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/uikit@3.7.2/dist/css/uikit.min.css" />
+    <link rel="stylesheet" href="./style.css" />
+</head>
+
+<body>
+    <!--[if lt IE 7]>
+            <p class="browsehappy">You are using an <strong>outdated</strong> browser. Please <a href="#">upgrade your browser</a> to improve your experience.</p>
+        <![endif]-->
+
+    <div id="menu"
+        class="uk-section uk-section-muted uk-section-xsmall uk-animation-slide-bottom-small uk-padding-remove-vertical">
+        <div class="uk-container uk-container-xsmall">
+            <div class="uk-flex uk-flex-center uk-flex-middle uk-flex-wrap uk-flex-column">
+                <div>
+                    <label class="uk-form-label uk-hidden@m">
+                        <p>Digite a atividade ou local que busca:</p>
+                    </label>
+                    <h2 class="uk-heading-xsmall uk-visible@m">Digite a atividade ou local que busca</h2>
+                </div>
+                <div class="uk-inline uk-width-1-1">
+                    <a onclick="filterMarkersByTags()" style="color:white" href="#" aria-label="Botão para busca"
+                        class="uk-form-icon uk-form-icon-flip uk-border-pill uk-form-small uk-background-primary"
+                        href="#" uk-icon="icon: search"></a>
+                    <input id="txtSearch" class="uk-input uk-border-pill uk-form-small" type="search"
+                        placeholder="Digite aqui e clique na lupa...">
+                </div>
+                <div class="uk-margin-top uk-flex uk-flex-center uk-flex-middle uk-flex-wrap">
+                    <span class="">Pesquisar por categorias:</span>
+                    <a onclick="filterMarkersByCategory('parques')" class="uk-text-decoration-none"><span
+                            class="uk-badge uk-margin-small-left">Parques</span></a>
+                    <a onclick="filterMarkersByCategory('praca')" class="uk-text-decoration-none"><span
+                            class="uk-badge uk-margin-small-left">Praças</span></a>
+                    <a onclick="filterMarkersByCategory('outros')" class="uk-text-decoration-none"><span
+                            class="uk-badge uk-margin-small-left">Outros</span></a>
+                    <a onclick="filterMarkersByCategory('')" class="uk-text-decoration-none"><span
+                            class="uk-badge uk-margin-small-left">Todas categorias</span></a>
+                </div>
+                <div id="spinner" uk-spinner></div>
+            </div>
+        </div>
+    </div>
+
+    <div id="content" class="uk-section uk-section-muted uk-section-xsmall uk-animation-slide-bottom-small">
+        <div class="uk-container uk-container-expand uk-padding-remove-horizontal">
+            <div id="map" class="uk-invisible" uk-height-viewport="expand: true"></div>
+        </div>
+    </div>
+
+    <!-- UIkit JS -->
+    <script src="https://cdn.jsdelivr.net/npm/uikit@3.7.2/dist/js/uikit.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/uikit@3.7.2/dist/js/uikit-icons.min.js"></script>
+    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"
+        integrity="sha512-XQoYMqMTK8LvdxXYG3nZ448hOEQiglfqkJs1NOQV44cWnUrBc8PkAOcXy20w0vlaXaVUearIOBhiXZ5V3ynxwA=="
+        crossorigin=""></script>
+    <script src="./slugify.js"></script>
+    <script src="./db.js"></script>
+    <script src="./components.js"></script>
+    <script src="./map.js"></script>
+
+    <script>
+
+        const maps = new Maps();
+
+        const map = maps.createMap({
+            'divId': 'map',
+            'lat': -19.852031,
+            'lng': -43.977785,
+            'zoom': 14,
+            'tileServer': maps.tileServers.OPENSTREETMAP,
+            'mapKey': null
+        });
+
+        const components = new Components();
+        /**
+         * Para cada local que será adicionado como marcador: 
+         * Adiciona o id como o nome do local de forma higienizada.
+         * Ao clicar no marcador será exibido um popup com as informações do local
+         * O centro do mapa será centralizado horizontalmente abaixo verticalmente (de acordo com o zoom) para ter um maior espaço visível do popup.
+         */
+        db.places.forEach(place => {
+            const id = place.name.toLowerCase().replaceAll(/da |de |do /gi, '').slugify().replace(/[^\w\s]/gi, '');
+            const marker = L.marker([place.location.lat, place.location.lng], { icon: components.icon(id, place.category) })
+                .addTo(map)
+                .bindPopup(components.popup(place.name, place.description, place.address))
+                .on('click', function (e) {
+                    const zoomLevel = Math.max(map.getZoom(), 15);
+                    let bottomLat = e.latlng.lat;
+
+                    switch (zoomLevel) {
+                        case 15:
+                            bottomLat = 0.00750;
+                            break;
+                        case 16:
+                            bottomLat = 0.00350;
+                            break;
+                        case 17:
+                            bottomLat = 0.00180;
+                            break;
+                        case 18:
+                            bottomLat = 0.00090;
+                            break;
+                    }
+                    map.flyTo([(e.latlng.lat + bottomLat), e.latlng.lng], zoomLevel);
+                });
+        });
+
+        //Remove o Spinner de carregamento inicial do mapa.
+        document.getElementById("map").classList.remove("uk-invisible");
+        document.getElementById("spinner").classList.add("uk-invisible");
+
+        //Método exibe apenas os locais da categoria selecionada (se for vazio exibe todas)
+        function filterMarkersByCategory(category) {
+            map.closePopup();
+            if (category === '') {
+                return document.querySelectorAll(`svg[id]`).forEach(e => e.classList.remove("uk-invisible"));
+            }
+            document.querySelectorAll("svg[id]").forEach(e => e.classList.add("uk-invisible"));
+            document.querySelectorAll(`svg[${category}]`).forEach(e => e.classList.remove("uk-invisible"));
+        }
+
+        //Método exibe apenas os locais que as tags estão contidas nas palavras inseridas para pesquisa.
+        function filterMarkersByTags() {
+            map.closePopup();
+            const input = document.getElementById("txtSearch").value.slugify().replace(/[^\w]/gi, '');
+            if (input === '') {
+                return UIkit.notification({
+                    message: 'Texto inserido para busca inválido.',
+                    timeout: 2000
+                });
+            }
+
+            document.querySelectorAll("svg[id]").forEach(e => e.classList.add("uk-invisible"));
+            const arrInput = input.split(" ");
+            const resultMarkers = [];
+            let hasResult = false;
+
+            db.places.forEach(place => {
+                //Une todos as tags em uma única do local em uma string e verifica com base nela para diminuir o número de interações.
+                let tagsString = place.tags.join();
+                const name = place.name.toLowerCase().replaceAll(/da |de |do /gi, '').slugify().replaceAll("-", ',');
+                tagsString = tagsString + "," + name;
+                arrInput.forEach(txt => {
+                    if (tagsString.indexOf(txt) > -1) {
+                        const id = place.name.toLowerCase().replaceAll(/da |de |do /gi, '').slugify().replace(/[^\w\s]/gi, '');
+                        document.querySelectorAll(`svg[id=${id}]`).forEach(e => e.classList.remove("uk-invisible"));
+                        hasResult = true;
+                    }
+                });
+            });
+            if (!hasResult) {
+                return UIkit.notification({
+                    message: 'Não foram encontrados lugares com os critérios informados.',
+                    timeout: 2000
+                });
+            }
+        }
+
+    </script>
+
+</body>
+
+</html>
