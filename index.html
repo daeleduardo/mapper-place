@@ -128,6 +128,7 @@
         //Método exibe apenas os locais da categoria selecionada (se for vazio exibe todas)
         function filterMarkersByCategory(category) {
             map.closePopup();
+            map.flyTo([-19.852031,  -43.977785], 14);
             if (category === '') {
                 return document.querySelectorAll(`svg[id]`).forEach(e => e.classList.remove("uk-invisible"));
             }
@@ -138,6 +139,7 @@
         //Método exibe apenas os locais que as tags estão contidas nas palavras inseridas para pesquisa.
         function filterMarkersByTags() {
             map.closePopup();
+            map.flyTo([-19.852031,  -43.977785], 14);
             const input = document.getElementById("txtSearch").value.slugify().replace(/[^\w]/gi, '');
             if (input === '') {
                 return UIkit.notification({
